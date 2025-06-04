@@ -2,29 +2,37 @@ import requests
 import pandas as pd
 import time
 from datetime import datetime
+import plotly.io as pio
 import os
 import sys
-import plotly.io as pio
-pio.renderers.default = 'browser'
+from pathlib import Path
 
 sys.path.append(os.path.abspath("."))
-
 from utils.plotting import plot_signals_plotly
 
-# configuration 
 API_URL = "https://api.kraken.com/0/public/OHLC"
 PAIR = "XMRUSD"
-INTERVAL = 5  
-LOOKBACK_CANDLES = 100
+INTERVAL = 5  # in minutes
+LOG_PATH = "logs/signals.csv"
+CHECK_INTERVAL = 120  # seconds
+
+pio.renderers.default = 'browser'
 
 def fetch_ohlc(pair=PAIR, interval=INTERVAL):
-    params = {
-        "pair": pair,
-        "interval": interval
-    }
+    params = {"pair": pair, "interval": interval}
     response = requests.get(API_URL, params=params)
-    result = response.json()["result"]
-    key = list(result.keys())[0]  # dynamic pair key
+    data = response.json()
+
+    if "error" in data and data["error"]:
+        print("Kraken API error:", data["error"])
+        return pd.DataFrame()
+
+    result = data.get("result")
+    if not result:
+        print("No result returned from Kraken.")
+        return pd.DataFrame()
+
+    key = list(result.keys())[0]
     ohlc = result[key]
 
     df = pd.DataFrame(ohlc, columns=["time", "open", "high", "low", "close", "vwap", "volume", "count"])
@@ -48,27 +56,44 @@ def generate_signal(df):
     df.loc[df["rsi_14"] > 70, "signal"] = -1
     return df
 
-def monitor():
-    print("Fetching latest XMR data from Kraken...")
-    df = fetch_ohlc()
-    df = compute_rsi(df)
-    df = generate_signal(df)
+def log_signal(row):
+    os.makedirs("logs", exist_ok=True)
+    row.to_frame().T.to_csv(LOG_PATH, mode="a", index=False, header=not Path(LOG_PATH).exists())
 
-    latest_row = df.iloc[-1]
-    ts = latest_row["time"]
-    price = latest_row["close"]
-    signal = latest_row["signal"]
+def monitor_loop():
+    print("Starting XMR signal monitor... (only on new candles)")
+    last_timestamp = None
 
-    if signal == 1:
-        action = "BUY"
-    elif signal == -1:
-        action = "SELL"
-    else:
-        action = "HOLD"
+    while True:
+        try:
+            df = fetch_ohlc()
+            if df.empty:
+                print("No data received.")
+            else:
+                current_timestamp = df.iloc[-1]["time"]
 
-    print(f"[{ts}] Price: ${price:.2f} | Signal: {action}")
+                if last_timestamp is None or current_timestamp != last_timestamp:
+                    last_timestamp = current_timestamp
+                    df = compute_rsi(df)
+                    df = generate_signal(df)
+                    latest = df.iloc[-1]
+                    ts = latest["time"]
+                    price = latest["close"]
+                    signal = latest["signal"]
+                    action = {1: "BUY", -1: "SELL"}.get(signal, "HOLD")
 
-    plot_signals_plotly(df.tail(50))
+                    print(f"[{ts}] ${price:.2f} | Signal: {action}")
+                    log_signal(latest[["time", "close", "rsi_14", "signal"]])
+                    plot_signals_plotly(df.tail(50))
+                    time.sleep(3)
+                else:
+                    print(f"[{datetime.now()}] No new candle. Skipping...")
+
+        except Exception as e:
+            print("Error:", e)
+
+        print(f"Waiting {CHECK_INTERVAL}s...\n")
+        time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
-    monitor()
+    monitor_loop()
