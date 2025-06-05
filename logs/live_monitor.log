@@ -1,0 +1,10 @@
+2025-06-05 13:15:02,653 | 2025-06-05 18:15:00 | $313.87 | Signal: BUY
+2025-06-05 13:15:02,660 | Runtime error: "['timestamp'] not in index"
+2025-06-05 13:15:46,506 | 2025-06-05 18:15:00 | $314.24 | Signal: HOLD
+2025-06-05 13:15:48,075 | Runtime error: 
+Image export using the "kaleido" engine requires the Kaleido package,
+which can be installed using pip:
+
+    $ pip install --upgrade kaleido
+
+2025-06-05 13:19:38,766 | 2025-06-05 18:15:00 | $316.36 | Signal: HOLD

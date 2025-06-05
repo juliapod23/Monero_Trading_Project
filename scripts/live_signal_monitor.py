@@ -6,17 +6,26 @@ import plotly.io as pio
 import os
 import sys
 from pathlib import Path
+import logging
 
 sys.path.append(os.path.abspath("."))
 from utils.plotting import plot_signals_plotly
 
+# configuration
 API_URL = "https://api.kraken.com/0/public/OHLC"
 PAIR = "XMRUSD"
 INTERVAL = 5  # in minutes
 LOG_PATH = "logs/signals.csv"
 CHECK_INTERVAL = 120  # seconds
+pio.renderers.default = "svg"
 
-pio.renderers.default = 'browser'
+# logging setup
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    filename="logs/live_monitor.log",
+    level=logging.INFO,
+    format="%(asctime)s | %(message)s",
+)
 
 def fetch_ohlc(pair=PAIR, interval=INTERVAL):
     params = {"pair": pair, "interval": interval}
@@ -57,11 +66,12 @@ def generate_signal(df):
     return df
 
 def log_signal(row):
-    os.makedirs("logs", exist_ok=True)
+    from pathlib import Path
     row.to_frame().T.to_csv(LOG_PATH, mode="a", index=False, header=not Path(LOG_PATH).exists())
 
+
 def monitor_loop():
-    print("Starting XMR signal monitor... (only on new candles)")
+    print("Starting XMR signal monitor...")
     last_timestamp = None
 
     while True:
@@ -82,17 +92,15 @@ def monitor_loop():
                     signal = latest["signal"]
                     action = {1: "BUY", -1: "SELL"}.get(signal, "HOLD")
 
-                    print(f"[{ts}] ${price:.2f} | Signal: {action}")
+                    logging.info(f"{ts} | ${price:.2f} | Signal: {action}")
                     log_signal(latest[["time", "close", "rsi_14", "signal"]])
-                    plot_signals_plotly(df.tail(50))
-                    time.sleep(3)
-                else:
-                    print(f"[{datetime.now()}] No new candle. Skipping...")
+
+                    fig = plot_signals_plotly(df.tail(50))
+                    fig.write_image("logs/latest_signal_plot.png")
 
         except Exception as e:
-            print("Error:", e)
+            logging.error(f"Runtime error: {e}")
 
-        print(f"Waiting {CHECK_INTERVAL}s...\n")
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":

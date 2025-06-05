@@ -1,4 +1,7 @@
 import plotly.graph_objs as go
+import plotly.io as pio
+
+pio.renderers.default = 'svg'
 
 def plot_signals_plotly(df, signal_col="signal", title="Price Chart with Signals"):
     fig = go.Figure()
@@ -32,4 +35,5 @@ def plot_signals_plotly(df, signal_col="signal", title="Price Chart with Signals
         height=600
     )
 
-    fig.show()
+    fig.write_image("logs/latest_plot.png")
+    # fig.show()
