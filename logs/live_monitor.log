@@ -18,3 +18,13 @@ which can be installed using pip:
 [0605/134008.294:WARNING:gpu_process_host.cc(1295)] The GPU process has crashed 1 time(s)
 ^C
 2025-06-07 14:46:03,807 | 2025-06-07 19:45:00 | $326.14 | Signal: SELL
+2025-06-07 15:53:10,065 | 2025-06-07 20:50:00 | $327.17 | Signal: HOLD
+2025-06-07 16:21:05,154 | 2025-06-07 21:20:00 | $327.86 | Signal: HOLD
+2025-06-07 16:38:11,791 | Runtime error: Failed to start Kaleido subprocess. Error stream:
+
+[0607/162107.346:WARNING:resource_bundle.cc(405)] locale_file_path.empty() for locale 
+[0607/162107.505:WARNING:headless_browser_main_parts.cc(83)] Cannot create Pref Service with no user data dir.
+[0607/162107.921:ERROR:gpu_init.cc(430)] Passthrough is not supported, GL is swiftshader
+[0607/163811.681:ERROR:network_service_instance_impl.cc(330)] Network service crashed, restarting service.
+[0607/163811.726:WARNING:gpu_process_host.cc(1295)] The GPU process has crashed 1 time(s)
+^C

@@ -1,47 +1,34 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import zscore
-import os
+from utils.indicators import compute_indicators
+from utils.filters import apply_signal_filters
 
-# configuration
 INPUT_PATH = "logs/signals.csv"
 OUTPUT_PATH = "logs/filtered_signals.csv"
-RSI_BUY = 30
-RSI_SELL = 70
-VOLATILITY_WINDOW = 20
-VOLATILITY_ZSCORE_THRESHOLD = 1.5
+VERSION = "v1.0.0"  # tag your logic version
 
-# load and prepare data
-df = pd.read_csv(INPUT_PATH, parse_dates=["time"])
-df = df.sort_values("time")
-df.reset_index(drop=True, inplace=True)
+# Load raw signal data
+df = pd.read_csv(INPUT_PATH)
+df["time"] = pd.to_datetime(df["time"])
 
-# compute volatility
-df["returns"] = df["close"].pct_change()
-df["volatility"] = df["returns"].rolling(VOLATILITY_WINDOW).std()
-df["volatility_zscore"] = zscore(df["volatility"].fillna(0))
+# === Compute Features (example placeholders) ===
+df = compute_indicators(df)
 
-# signal logic
-def determine_signal(row):
-    if pd.isna(row["rsi_14"]) or pd.isna(row["volatility_zscore"]):
-        return 0, "insufficient data"  # hold
+# === Signal Logic (placeholder) ===
+df["filtered_signal"] = 0
+df.loc[df["rsi_14"] < 30, "filtered_signal"] = 1
+df.loc[df["rsi_14"] > 70, "filtered_signal"] = -1
 
-    if row["rsi_14"] < RSI_BUY and row["volatility_zscore"] < VOLATILITY_ZSCORE_THRESHOLD:
-        return 1, "rsi_oversold + low_volatility"  # buy
+# === Filter logic (optional advanced logic)
+df = apply_signal_filters(df)
 
-    if row["rsi_14"] > RSI_SELL and row["volatility_zscore"] < VOLATILITY_ZSCORE_THRESHOLD:
-        return -1, "rsi_overbought + low_volatility"  # sell
+# === Compute actual outcome
+N_FORWARD = 5
+df["future_return"] = df["close"].shift(-N_FORWARD) / df["close"] - 1
+df["actual_direction"] = df["future_return"].apply(lambda r: 1 if r > 0 else -1)
+df["predicted_direction"] = df["filtered_signal"]
+df["version"] = VERSION
 
-    return 0, "neutral or high_volatility" # hold
-
-signals = df.apply(determine_signal, axis=1)
-df["filtered_signal"] = signals.apply(lambda x: x[0])
-df["signal_reason"] = signals.apply(lambda x: x[1])
-
-# save to file
-os.makedirs("logs", exist_ok=True)
+# === Save to CSV
 df.to_csv(OUTPUT_PATH, index=False)
-
-# print summary
-print(f"Filtered signals saved to {OUTPUT_PATH}")
-print(df[["time", "close", "rsi_14", "volatility", "filtered_signal"]].tail())
+print(f"Saved filtered signals with actual/predicted labels and version to {OUTPUT_PATH}")
