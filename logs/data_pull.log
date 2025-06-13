@@ -1,0 +1,4 @@
+2025-06-13 15:25:25,600 | INFO | Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-06-13 15:25:25,600 | INFO | Scheduler started.
+2025-06-13 15:25:25,603 | INFO | Added job "fetch_daily_data" to job store "default"
+2025-06-13 15:25:25,603 | INFO | Scheduler started

@@ -1,34 +1,37 @@
 import pandas as pd
-import numpy as np
 from utils.indicators import compute_indicators
 from utils.filters import apply_signal_filters
 
-INPUT_PATH = "logs/signals.csv"
-OUTPUT_PATH = "logs/filtered_signals.csv"
-VERSION = "v1.0.0"  # tag your logic version
+def generate_signals(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    df = compute_indicators(df)
 
-# Load raw signal data
-df = pd.read_csv(INPUT_PATH)
-df["time"] = pd.to_datetime(df["time"])
+    df["filtered_signal"] = 0
+    df.loc[(df["rsi_14"] < config["rsi_low"]) & (df["volatility_zscore"] < config["vol_z_cap"]), "filtered_signal"] = 1
+    df.loc[(df["rsi_14"] > config["rsi_high"]) & (df["volatility_zscore"] < config["vol_z_cap"]), "filtered_signal"] = -1
 
-# === Compute Features (example placeholders) ===
-df = compute_indicators(df)
+    df = apply_signal_filters(df)
+    return df
 
-# === Signal Logic (placeholder) ===
-df["filtered_signal"] = 0
-df.loc[df["rsi_14"] < 30, "filtered_signal"] = 1
-df.loc[df["rsi_14"] > 70, "filtered_signal"] = -1
+if __name__ == "__main__":
+    import json
 
-# === Filter logic (optional advanced logic)
-df = apply_signal_filters(df)
+    CONFIG_PATH = "params/best_strategy_config.json"
+    INPUT_PATH = "logs/signals.csv"
+    OUTPUT_PATH = "logs/filtered_signals.csv"
 
-# === Compute actual outcome
-N_FORWARD = 5
-df["future_return"] = df["close"].shift(-N_FORWARD) / df["close"] - 1
-df["actual_direction"] = df["future_return"].apply(lambda r: 1 if r > 0 else -1)
-df["predicted_direction"] = df["filtered_signal"]
-df["version"] = VERSION
+    with open(CONFIG_PATH, "r") as f:
+        config = json.load(f)
 
-# === Save to CSV
-df.to_csv(OUTPUT_PATH, index=False)
-print(f"Saved filtered signals with actual/predicted labels and version to {OUTPUT_PATH}")
+    df = pd.read_csv(INPUT_PATH)
+    df["time"] = pd.to_datetime(df["time"])
+
+    df = generate_signals(df, config)
+
+    # Compute future returns and save
+    forward_window = config.get("future_window", 5)
+    df["future_return"] = df["close"].shift(-forward_window) / df["close"] - 1
+    df["predicted_direction"] = df["filtered_signal"]
+    df["actual_direction"] = df["future_return"].apply(lambda r: 1 if r > 0 else -1)
+
+    df.to_csv(OUTPUT_PATH, index=False)
+    print(f"Signals saved to {OUTPUT_PATH}")

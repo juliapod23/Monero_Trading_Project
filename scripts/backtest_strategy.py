@@ -1,22 +1,21 @@
 import pandas as pd
 
-# configuration
-DATA_PATH = "logs/filtered_signals.csv"
-INITIAL_BALANCE = 1000.0
+def backtest_strategy(df: pd.DataFrame, forward_window: int = 5) -> pd.DataFrame:
+    df = df.copy()
+    df["future_return"] = df["close"].shift(-forward_window) / df["close"] - 1
+    df["strategy_return"] = df["filtered_signal"] * df["future_return"]
+    df["cumulative_return"] = (1 + df["strategy_return"]).cumprod()
+    df["actual_direction"] = df["future_return"].apply(lambda r: 1 if r > 0 else -1)
+    df["predicted_direction"] = df["filtered_signal"]
+    return df
 
-# load data
-df = pd.read_csv(DATA_PATH, parse_dates=["time"])
-df = df.sort_values("time")
-df["future_return"] = df["close"].pct_change().shift(-1)
-df["strategy_return"] = df["future_return"] * df["filtered_signal"].shift(1)
+if __name__ == "__main__":
+    INPUT_PATH = "logs/filtered_signals.csv"
+    OUTPUT_PATH = "logs/backtest_results.csv"
 
-# backtest logic
-df["balance"] = INITIAL_BALANCE * (1 + df["strategy_return"].fillna(0)).cumprod()
+    df = pd.read_csv(INPUT_PATH)
+    df["time"] = pd.to_datetime(df["time"])
 
-# results
-total_return = df["balance"].iloc[-1] / INITIAL_BALANCE - 1
-print(f"Final Balance: ${df['balance'].iloc[-1]:.2f}")
-print(f"Strategy Return: {total_return * 100:.2f}%")
-
-# save results
-df.to_csv("logs/backtest_results.csv", index=False)
+    result = backtest_strategy(df)
+    result.to_csv(OUTPUT_PATH, index=False)
+    print(f"Backtest results saved to {OUTPUT_PATH}")

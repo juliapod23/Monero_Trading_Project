@@ -96,7 +96,10 @@ def monitor_loop():
                     log_signal(latest[["time", "close", "rsi_14", "signal"]])
 
                     fig = plot_signals_plotly(df.tail(50))
-                    fig.write_image("logs/latest_signal_plot.png")
+                    if fig is not None:
+                        fig.write_image("logs/latest_signal_plot.png")
+                    else:
+                        logging.warning("plot_signals_plotly returned None, skipping image save.")
 
         except Exception as e:
             logging.error(f"Runtime error: {e}")

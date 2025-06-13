@@ -1,27 +1,20 @@
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-import subprocess
-import time
-import os
-import subprocess
+import pandas as pd
+from utils.best_config_loader import load_best_config, generate_signals_with_config
+from scripts.backtest_strategy import backtest_strategy
 
-def run_step(description, command):
-    print(f"\n{description}...")
-    start = time.time()
-    result = subprocess.run(command, shell=True)
-    elapsed = time.time() - start
-    if result.returncode == 0:
-        print(f"{description} completed in {elapsed:.2f}s")
-    else:
-        print(f"{description} failed with exit code {result.returncode}")
-        exit(1)
+def run_pipeline():
+    df = pd.read_csv("logs/signals.csv")
+    df["time"] = pd.to_datetime(df["time"])
 
-# run full pipeline
-run_step("1. Run signal engine", "python scripts/signal_engine.py")
-run_step("2. Generate filtered signal plot", "python scripts/filtered_signal_plotter.py")
-run_step("3. Run backtest", "python scripts/backtest_strategy.py")
+    config = load_best_config()
+    df = generate_signals_with_config(df, config)
+    df = backtest_strategy(df, forward_window=int(config.get("future_window", 5)))
 
-print("\n Pipeline completed successfully.")
+    df.to_csv("logs/backtest_results.csv", index=False)
+    print("Full pipeline completed and saved to logs/backtest_results.csv")
 
-Path("scripts").mkdir(parents=True, exist_ok=True)
+if __name__ == "__main__":
+    run_pipeline()
