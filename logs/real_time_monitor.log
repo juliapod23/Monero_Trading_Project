@@ -1,0 +1,6 @@
+2025-06-21 14:53:02,760 | INFO | Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-06-21 14:53:02,761 | INFO | Real-time monitor started.
+2025-06-21 14:53:02,761 | INFO | Fetching latest data...
+2025-06-21 14:53:03,537 | ERROR | Signal processing failed: unsupported operand type(s) for /: 'str' and 'str'
+2025-06-21 14:53:03,540 | INFO | Added job "process_signals" to job store "default"
+2025-06-21 14:53:03,540 | INFO | Scheduler started
